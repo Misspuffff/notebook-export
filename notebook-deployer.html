@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Notebook Deployer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #ffffff;
+      --bg-secondary: #f5f5f3;
+      --bg-tertiary: #eeede9;
+      --text: #1a1a18;
+      --text-secondary: #5a5a56;
+      --text-tertiary: #9a9994;
+      --border: rgba(0,0,0,0.12);
+      --border-md: rgba(0,0,0,0.22);
+      --blue-50: #E6F1FB;
+      --blue-200: #85B7EB;
+      --blue-600: #185FA5;
+      --blue-800: #0C447C;
+      --blue-900: #042C53;
+      --green-50: #EAF3DE;
+      --green-600: #3B6D11;
+      --green-800: #27500A;
+      --amber-50: #FAEEDA;
+      --amber-600: #854F0B;
+      --red-50: #FCEBEB;
+      --red-600: #A32D2D;
+      --gray-100: #D3D1C7;
+      --gray-400: #888780;
+      --radius-sm: 6px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1c1c1a;
+        --bg-secondary: #242422;
+        --bg-tertiary: #2c2c2a;
+        --text: #f0efe9;
+        --text-secondary: #a8a8a2;
+        --text-tertiary: #6a6a66;
+        --border: rgba(255,255,255,0.1);
+        --border-md: rgba(255,255,255,0.2);
+        --blue-50: #0c2540;
+        --blue-600: #378ADD;
+        --blue-800: #85B7EB;
+        --blue-900: #B5D4F4;
+        --green-50: #173404;
+        --green-600: #639922;
+        --green-800: #C0DD97;
+        --amber-50: #412402;
+        --amber-600: #EF9F27;
+        --red-50: #501313;
+        --red-600: #F09595;
+        --gray-400: #888780;
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg-tertiary);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    .topbar {
+      background: var(--bg);
+      border-bottom: 0.5px solid var(--border);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      height: 56px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .logo {
+      width: 28px;
+      height: 28px;
+      background: var(--blue-900);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .topbar-title {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .topbar-sub {
+      font-size: 13px;
+      color: var(--text-tertiary);
+      margin-left: 4px;
+    }
+
+    .topbar-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .auth-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 99px;
+      border: 0.5px solid var(--border);
+      font-size: 12px;
+      color: var(--text-secondary);
+      background: var(--bg-secondary);
+    }
+
+    .auth-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--gray-400);
+    }
+
+    .auth-dot.connected { background: var(--green-600); }
+
+    .main {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .page-header { margin-bottom: 0.5rem; }
+    .page-header h1 { font-size: 26px; font-weight: 500; color: var(--text); margin-bottom: 6px; }
+    .page-header p { font-size: 15px; color: var(--text-secondary); }
+
+    .card {
+      background: var(--bg);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 1rem 1.25rem;
+      border-bottom: 0.5px solid var(--border);
+    }
+
+    .step-badge {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 0.5px solid var(--border-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      background: var(--bg-secondary);
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+
+    .step-badge.active { background: var(--blue-900); border-color: var(--blue-900); color: var(--blue-50); }
+    .step-badge.done { background: var(--green-600); border-color: var(--green-600); color: var(--green-50); }
+
+    .card-title { font-size: 15px; font-weight: 500; }
+    .card-title-sub { font-size: 13px; color: var(--text-secondary); margin-left: 4px; }
+
+    .card-body { padding: 1.25rem; }
+
+    .card.locked { opacity: 0.45; pointer-events: none; }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 5px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      padding: 8px 12px;
+      font-size: 14px;
+      border: 0.5px solid var(--border-md);
+      border-radius: var(--radius-md);
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+      font-family: inherit;
+      transition: border-color 0.15s;
+    }
+
+    input[type="text"]:focus, input[type="password"]:focus {
+      border-color: var(--blue-600);
+      box-shadow: 0 0 0 3px rgba(24, 95, 165, 0.12);
+    }
+
+    .field { margin-bottom: 1rem; }
+    .field:last-child { margin-bottom: 0; }
+
+    .help-text {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      margin-top: 5px;
+      line-height: 1.5;
+    }
+
+    .help-text a {
+      color: var(--blue-600);
+      text-decoration: none;
+    }
+
+    .help-text a:hover { text-decoration: underline; }
+
+    code {
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 11px;
+      background: var(--bg-secondary);
+      padding: 1px 5px;
+      border-radius: 4px;
+      border: 0.5px solid var(--border);
+    }
+
+    .divider {
+      border: none;
+      border-top: 0.5px solid var(--border);
+      margin: 1rem 0;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 9px 18px;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+      border: 0.5px solid var(--border-md);
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .btn:hover { background: var(--bg-secondary); }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .btn-primary {
+      background: var(--blue-900);
+      color: var(--blue-50);
+      border-color: var(--blue-900);
+    }
+
+    .btn-primary:hover { background: var(--blue-600); border-color: var(--blue-600); }
+
+    .btn-full { width: 100%; }
+
+    .btn-deploy {
+      background: var(--green-600);
+      color: var(--green-50);
+      border-color: var(--green-600);
+      width: 100%;
+      padding: 11px;
+      font-size: 15px;
+    }
+
+    .btn-deploy:hover { background: var(--green-800); border-color: var(--green-800); }
+
+    .notebook-list { display: flex; flex-direction: column; gap: 6px; }
+
+    .nb-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      background: var(--bg);
+    }
+
+    .nb-item:hover { border-color: var(--border-md); background: var(--bg-secondary); }
+    .nb-item.selected { border: 1.5px solid var(--blue-600); background: var(--blue-50); }
+
+    .nb-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: var(--radius-sm);
+      background: var(--blue-50);
+      border: 0.5px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .nb-name { font-size: 13px; font-weight: 500; }
+    .nb-meta { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
+
+    .tag {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 99px;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    .tag-template { background: var(--green-50); color: var(--green-600); }
+    .tag-selected { background: var(--blue-50); color: var(--blue-800); }
+
+    .channel-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 8px;
+    }
+
+    .ch-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      background: var(--bg);
+    }
+
+    .ch-item:hover { border-color: var(--border-md); }
+    .ch-item.selected { border: 1.5px solid var(--blue-600); background: var(--blue-50); }
+
+    .ch-check {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      border: 0.5px solid var(--border-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      flex-shrink: 0;
+      color: var(--blue-50);
+    }
+
+    .ch-item.selected .ch-check { background: var(--blue-600); border-color: var(--blue-600); }
+
+    .ch-name { font-size: 13px; font-weight: 500; }
+    .ch-team { font-size: 11px; color: var(--text-secondary); }
+
+    .add-row { display: flex; gap: 8px; margin-top: 10px; }
+    .add-row input { flex: 1; }
+
+    .summary-bar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 10px 12px;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+      margin-bottom: 1rem;
+    }
+
+    .pill {
+      font-size: 12px;
+      padding: 3px 10px;
+      border-radius: 99px;
+      background: var(--blue-50);
+      color: var(--blue-800);
+      border: 0.5px solid var(--border);
+    }
+
+    .status-list { display: flex; flex-direction: column; gap: 8px; margin-top: 1rem; }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: var(--bg-secondary);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-md);
+    }
+
+    .s-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .s-dot.pending { background: var(--gray-400); }
+    .s-dot.running { background: var(--amber-600); animation: pulse 1s infinite; }
+    .s-dot.done { background: var(--green-600); }
+    .s-dot.error { background: var(--red-600); }
+
+    .s-name { font-size: 13px; font-weight: 500; flex: 1; }
+    .s-sub { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
+
+    .setup-steps {
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .setup-steps p { font-size: 13px; color: var(--text-secondary); margin-bottom: 10px; font-weight: 500; }
+
+    .setup-step-item {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .setup-step-num {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--bg-tertiary);
+      border: 0.5px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 500;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .loading-text {
+      font-size: 13px;
+      color: var(--text-secondary);
+      padding: 8px 0;
+    }
+
+    @keyframes pulse { 0%,100%{ opacity:1 } 50%{ opacity:0.4 } }
+
+    .permissions-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .perm-tag {
+      font-size: 11px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: var(--bg-tertiary);
+      border: 0.5px solid var(--border);
+      color: var(--text-secondary);
+    }
+
+    .info-box {
+      background: var(--blue-50);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+      font-size: 13px;
+      color: var(--blue-800);
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">📓</div>
+  <span class="topbar-title">Notebook Deployer</span>
+  <span class="topbar-sub">OneNote → Teams</span>
+  <div class="topbar-right">
+    <div class="auth-badge" id="topbar-auth">
+      <div class="auth-dot" id="topbar-dot"></div>
+      <span id="topbar-label">Not signed in</span>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="page-header">
+    <h1>Deploy notebooks to channels</h1>
+    <p>Copy a OneNote template into multiple Teams channels — each gets its own independent notebook.</p>
+  </div>
+
+  <!-- Step 1: Auth -->
+  <div class="card" id="card1">
+    <div class="card-header">
+      <div class="step-badge active" id="badge1">1</div>
+      <span class="card-title">Connect your Microsoft account</span>
+    </div>
+    <div class="card-body">
+
+      <div class="setup-steps">
+        <p>First-time setup — Azure App Registration</p>
+        <div class="setup-step-item"><div class="setup-step-num">1</div><span>Go to <a href="https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank" style="color:var(--blue-600);">portal.azure.com → App registrations</a> → New registration</span></div>
+        <div class="setup-step-item"><div class="setup-step-num">2</div><span>Name it anything (e.g. "Notebook Deployer") → Register</span></div>
+        <div class="setup-step-item"><div class="setup-step-num">3</div><span>Under <strong>Authentication</strong> → Add a platform → Single-page application → Redirect URI: paste this page's URL</span></div>
+        <div class="setup-step-item"><div class="setup-step-num">4</div><span>Under <strong>API Permissions</strong> → Add delegated permissions:</span></div>
+        <div class="permissions-list" style="padding-left:28px;">
+          <span class="perm-tag">Notes.ReadWrite</span>
+          <span class="perm-tag">Team.ReadBasic.All</span>
+          <span class="perm-tag">Channel.ReadBasic.All</span>
+          <span class="perm-tag">TeamsTab.ReadWriteForTeam</span>
+        </div>
+        <div class="setup-step-item" style="margin-top:8px;"><div class="setup-step-num">5</div><span>Copy your <strong>Client ID</strong> and <strong>Tenant ID</strong> from the Overview page and paste below</span></div>
+      </div>
+
+      <div class="field">
+        <label>Client (App) ID</label>
+        <input type="text" id="client-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+        <p class="help-text">App registrations → your app → Overview → Application (client) ID</p>
+      </div>
+
+      <div class="field">
+        <label>Tenant ID</label>
+        <input type="text" id="tenant-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx or 'common'" />
+        <p class="help-text">App registrations → your app → Overview → Directory (tenant) ID. Use <code>common</code> if unsure.</p>
+      </div>
+
+      <button class="btn btn-primary btn-full" id="connect-btn" onclick="handleConnect()">
+        Sign in with Microsoft
+      </button>
+
+    </div>
+  </div>
+
+  <!-- Step 2: Notebook -->
+  <div class="card locked" id="card2">
+    <div class="card-header">
+      <div class="step-badge" id="badge2">2</div>
+      <span class="card-title">Pick a template notebook</span>
+    </div>
+    <div class="card-body">
+      <div class="info-box">The selected notebook is copied — never modified. Each channel gets a completely independent version.</div>
+      <div class="notebook-list" id="notebook-list">
+        <p class="loading-text">Sign in to load your notebooks...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3: Channels -->
+  <div class="card locked" id="card3">
+    <div class="card-header">
+      <div class="step-badge" id="badge3">3</div>
+      <span class="card-title">Select target channels</span>
+    </div>
+    <div class="card-body">
+      <label style="margin-bottom:10px;">Your Teams channels</label>
+      <div class="channel-grid" id="channel-list">
+        <p class="loading-text">Sign in to load your channels...</p>
+      </div>
+      <hr class="divider" />
+      <label>Add a channel manually</label>
+      <div class="add-row">
+        <input type="text" id="manual-team" placeholder="Team name" style="max-width:180px;" />
+        <input type="text" id="manual-channel" placeholder="Channel name" />
+        <button class="btn" onclick="addManualChannel()">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 4: Deploy -->
+  <div class="card locked" id="card4">
+    <div class="card-header">
+      <div class="step-badge" id="badge4">4</div>
+      <span class="card-title">Deploy</span>
+    </div>
+    <div class="card-body">
+      <div id="summary-bar" class="summary-bar" style="display:none;"></div>
+      <button class="btn btn-deploy" id="deploy-btn" onclick="handleDeploy()" disabled>
+        Deploy notebooks
+      </button>
+      <div id="status-list" class="status-list"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let accessToken = null;
+  let selectedNotebook = null;
+  let notebooks = [];
+  let channels = [];
+  let selectedChannels = new Set();
+
+  const SCOPES = [
+    'https://graph.microsoft.com/Notes.ReadWrite',
+    'https://graph.microsoft.com/Team.ReadBasic.All',
+    'https://graph.microsoft.com/Channel.ReadBasic.All',
+    'https://graph.microsoft.com/TeamsTab.ReadWriteForTeam',
+    'offline_access', 'openid'
+  ];
+
+  function setStep(active) {
+    for (let i = 1; i <= 4; i++) {
+      const card = document.getElementById('card' + i);
+      const badge = document.getElementById('badge' + i);
+      if (i < active) {
+        card.classList.remove('locked');
+        badge.className = 'step-badge done';
+        badge.textContent = '✓';
+      } else if (i === active) {
+        card.classList.remove('locked');
+        badge.className = 'step-badge active';
+        badge.textContent = i;
+      } else {
+        card.classList.add('locked');
+        badge.className = 'step-badge';
+        badge.textContent = i;
+      }
+    }
+  }
+
+  function handleConnect() {
+    const clientId = document.getElementById('client-id').value.trim();
+    const tenantId = document.getElementById('tenant-id').value.trim() || 'common';
+    if (!clientId) { alert('Please enter your Azure App Client ID'); return; }
+    const redirect = encodeURIComponent(window.location.href.split('#')[0].split('?')[0]);
+    const scope = encodeURIComponent(SCOPES.join(' '));
+    const url = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?client_id=${clientId}&response_type=token&redirect_uri=${redirect}&scope=${scope}&response_mode=fragment`;
+    const popup = window.open(url, 'ms-auth', 'width=520,height=640,left=200,top=100');
+    const btn = document.getElementById('connect-btn');
+    btn.textContent = 'Waiting for sign-in...';
+    btn.disabled = true;
+    const poll = setInterval(() => {
+      try {
+        if (!popup || popup.closed) { clearInterval(poll); btn.textContent = 'Sign in with Microsoft'; btn.disabled = false; return; }
+        const hash = popup.location.hash;
+        if (hash && hash.includes('access_token')) {
+          clearInterval(poll);
+          popup.close();
+          const params = new URLSearchParams(hash.replace('#',''));
+          accessToken = params.get('access_token');
+          onAuthenticated();
+        }
+      } catch(e) {}
+    }, 500);
+  }
+
+  function onAuthenticated() {
+    const dot = document.getElementById('topbar-dot');
+    const label = document.getElementById('topbar-label');
+    dot.className = 'auth-dot connected';
+    label.textContent = 'Connected';
+    const btn = document.getElementById('connect-btn');
+    btn.textContent = 'Reconnect';
+    btn.disabled = false;
+    setStep(2);
+    loadNotebooks();
+  }
+
+  async function loadNotebooks() {
+    const el = document.getElementById('notebook-list');
+    el.innerHTML = '<p class="loading-text">Loading notebooks...</p>';
+    try {
+      const res = await fetch('https://graph.microsoft.com/v1.0/me/onenote/notebooks?orderby=lastModifiedDateTime desc', {
+        headers: { Authorization: 'Bearer ' + accessToken }
+      });
+      const data = await res.json();
+      notebooks = data.value || [];
+      el.innerHTML = '';
+      if (!notebooks.length) { el.innerHTML = '<p class="loading-text">No notebooks found.</p>'; return; }
+      notebooks.forEach(nb => {
+        const item = document.createElement('div');
+        item.className = 'nb-item';
+        item.id = 'nb-' + nb.id;
+        const date = nb.lastModifiedDateTime ? new Date(nb.lastModifiedDateTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+        item.innerHTML = `
+          <div class="nb-icon">📓</div>
+          <div style="flex:1;min-width:0;">
+            <div class="nb-name">${nb.displayName}</div>
+            <div class="nb-meta">Last modified ${date}</div>
+          </div>
+          <span class="tag tag-template" id="nbtag-${nb.id}" style="display:none;">template</span>
+        `;
+        item.onclick = () => selectNotebook(nb);
+        el.appendChild(item);
+      });
+      setStep(3);
+      loadChannels();
+    } catch(e) {
+      el.innerHTML = '<p class="loading-text" style="color:var(--red-600);">Could not load notebooks. Check your API permissions.</p>';
+    }
+  }
+
+  function selectNotebook(nb) {
+    selectedNotebook = nb;
+    notebooks.forEach(n => {
+      const item = document.getElementById('nb-' + n.id);
+      const tag = document.getElementById('nbtag-' + n.id);
+      if (n.id === nb.id) { item.className = 'nb-item selected'; tag.style.display = 'inline'; }
+      else { item.className = 'nb-item'; tag.style.display = 'none'; }
+    });
+    updateDeployState();
+  }
+
+  async function loadChannels() {
+    const el = document.getElementById('channel-list');
+    el.innerHTML = '<p class="loading-text">Loading your Teams channels...</p>';
+    try {
+      const teamsRes = await fetch('https://graph.microsoft.com/v1.0/me/joinedTeams', {
+        headers: { Authorization: 'Bearer ' + accessToken }
+      });
+      const teamsData = await teamsRes.json();
+      const teams = teamsData.value || [];
+      channels = [];
+      for (const team of teams.slice(0, 8)) {
+        const chRes = await fetch(`https://graph.microsoft.com/v1.0/teams/${team.id}/channels`, {
+          headers: { Authorization: 'Bearer ' + accessToken }
+        });
+        const chData = await chRes.json();
+        (chData.value || []).forEach(ch => channels.push({ ...ch, teamId: team.id, teamName: team.displayName }));
+      }
+      renderChannels();
+    } catch(e) {
+      el.innerHTML = '<p class="loading-text" style="color:var(--red-600);">Could not load channels. Add them manually below.</p>';
+    }
+  }
+
+  function renderChannels() {
+    const el = document.getElementById('channel-list');
+    el.innerHTML = '';
+    if (!channels.length) {
+      el.innerHTML = '<p class="loading-text">No channels found. Add manually below.</p>';
+      return;
+    }
+    channels.forEach(ch => {
+      const key = ch.teamId + '::' + ch.id;
+      const item = document.createElement('div');
+      item.className = 'ch-item' + (selectedChannels.has(key) ? ' selected' : '');
+      item.id = 'ch-' + ch.id;
+      item.innerHTML = `
+        <div class="ch-check">${selectedChannels.has(key) ? '✓' : ''}</div>
+        <div>
+          <div class="ch-name">${ch.displayName}</div>
+          <div class="ch-team">${ch.teamName}</div>
+        </div>
+      `;
+      item.onclick = () => toggleChannel(ch, key, item);
+      el.appendChild(item);
+    });
+  }
+
+  function toggleChannel(ch, key, el) {
+    if (selectedChannels.has(key)) {
+      selectedChannels.delete(key);
+      el.className = 'ch-item';
+      el.querySelector('.ch-check').textContent = '';
+    } else {
+      selectedChannels.add(key);
+      el.className = 'ch-item selected';
+      el.querySelector('.ch-check').textContent = '✓';
+    }
+    updateDeployState();
+  }
+
+  function addManualChannel() {
+    const team = document.getElementById('manual-team').value.trim();
+    const ch = document.getElementById('manual-channel').value.trim();
+    if (!team || !ch) return;
+    const fakeId = 'manual-' + Date.now();
+    const fakeTeamId = 'manualt-' + Date.now();
+    channels.push({ id: fakeId, displayName: ch, teamId: fakeTeamId, teamName: team, manual: true });
+    document.getElementById('manual-team').value = '';
+    document.getElementById('manual-channel').value = '';
+    const key = fakeTeamId + '::' + fakeId;
+    selectedChannels.add(key);
+    renderChannels();
+    updateDeployState();
+  }
+
+  function updateDeployState() {
+    const btn = document.getElementById('deploy-btn');
+    const bar = document.getElementById('summary-bar');
+    const ready = selectedNotebook && selectedChannels.size > 0;
+    btn.disabled = !ready;
+    if (ready) {
+      setStep(4);
+      bar.style.display = 'flex';
+      bar.innerHTML = `
+        <span class="pill">📓 ${selectedNotebook.displayName}</span>
+        <span style="font-size:13px;color:var(--text-secondary);">→</span>
+        <span class="pill">${selectedChannels.size} channel${selectedChannels.size !== 1 ? 's' : ''}</span>
+      `;
+    } else {
+      bar.style.display = 'none';
+    }
+  }
+
+  async function handleDeploy() {
+    const btn = document.getElementById('deploy-btn');
+    btn.disabled = true;
+    btn.textContent = 'Deploying...';
+    const statusList = document.getElementById('status-list');
+    statusList.innerHTML = '';
+    const targets = channels.filter(ch => selectedChannels.has(ch.teamId + '::' + ch.id));
+    const jobs = targets.map(ch => {
+      const item = document.createElement('div');
+      item.className = 'status-item';
+      item.innerHTML = `
+        <div class="s-dot pending" id="dot-${ch.id}"></div>
+        <div>
+          <div class="s-name">${ch.teamName} → #${ch.displayName}</div>
+          <div class="s-sub" id="sub-${ch.id}">Waiting...</div>
+        </div>
+      `;
+      statusList.appendChild(item);
+      return { ch, item };
+    });
+    for (const { ch } of jobs) {
+      const dot = document.getElementById('dot-' + ch.id);
+      const sub = document.getElementById('sub-' + ch.id);
+      dot.className = 's-dot running';
+      sub.textContent = 'Copying sections and pages...';
+      try {
+        if (ch.manual) {
+          await new Promise(r => setTimeout(r, 600));
+          dot.className = 's-dot done';
+          sub.textContent = 'Added — pin notebook manually in Teams';
+        } else {
+          const newNb = await copyNotebook(ch, sub);
+          sub.textContent = 'Pinning as channel tab...';
+          await pinTab(ch, newNb);
+          dot.className = 's-dot done';
+          sub.textContent = 'Done — notebook tab pinned in channel';
+        }
+      } catch(e) {
+        dot.className = 's-dot error';
+        sub.textContent = 'Error: ' + (e.message || 'Unknown error');
+      }
+    }
+    btn.textContent = 'Deploy again';
+    btn.disabled = false;
+  }
+
+  async function copyNotebook(ch, subEl) {
+    const sectRes = await gget(`https://graph.microsoft.com/v1.0/me/onenote/notebooks/${selectedNotebook.id}/sections`);
+    const sections = sectRes.value || [];
+    subEl.textContent = `Creating notebook in ${ch.teamName}...`;
+    const newNbRes = await gpost(`https://graph.microsoft.com/v1.0/groups/${ch.teamId}/onenote/notebooks`, { displayName: `${selectedNotebook.displayName} — ${ch.displayName}` });
+    for (let si = 0; si < sections.length; si++) {
+      const section = sections[si];
+      subEl.textContent = `Copying section ${si+1}/${sections.length}: ${section.displayName}`;
+      const pagesRes = await gget(`https://graph.microsoft.com/v1.0/me/onenote/sections/${section.id}/pages`);
+      const pages = pagesRes.value || [];
+      const newSecRes = await gpost(`https://graph.microsoft.com/v1.0/groups/${ch.teamId}/onenote/notebooks/${newNbRes.id}/sections`, { displayName: section.displayName });
+      for (const page of pages) {
+        const contentRes = await fetch(`https://graph.microsoft.com/v1.0/me/onenote/pages/${page.id}/content`, { headers: { Authorization: 'Bearer ' + accessToken } });
+        const html = await contentRes.text();
+        await fetch(`https://graph.microsoft.com/v1.0/groups/${ch.teamId}/onenote/sections/${newSecRes.id}/pages`, {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'text/html' },
+          body: html
+        });
+      }
+    }
+    return newNbRes;
+  }
+
+  async function pinTab(ch, nb) {
+    const webUrl = nb.links?.oneNoteWebUrl?.href || '';
+    await gpost(`https://graph.microsoft.com/v1.0/teams/${ch.teamId}/channels/${ch.id}/tabs`, {
+      displayName: nb.displayName,
+      'teamsApp@odata.bind': 'https://graph.microsoft.com/v1.0/appCatalogs/teamsApps/0d820ecd-def2-4297-adad-78a3d3d7a292',
+      configuration: { entityId: nb.id, contentUrl: webUrl, websiteUrl: webUrl }
+    });
+  }
+
+  async function gget(url) {
+    const res = await fetch(url, { headers: { Authorization: 'Bearer ' + accessToken } });
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    return res.json();
+  }
+
+  async function gpost(url, body) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) { const t = await res.text(); throw new Error(t); }
+    return res.json();
+  }
+
+  (function checkRedirectToken() {
+    const hash = window.location.hash;
+    if (hash && hash.includes('access_token')) {
+      const params = new URLSearchParams(hash.replace('#',''));
+      const token = params.get('access_token');
+      if (token) { accessToken = token; history.replaceState(null, '', window.location.pathname); onAuthenticated(); }
+    }
+  })();
+</script>
+
+</body>
+</html>
