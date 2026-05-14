@@ -898,10 +898,28 @@
 
   (function checkRedirectToken() {
     const hash = window.location.hash;
+    // Restore saved client/tenant IDs after redirect
+    const savedClientId = sessionStorage.getItem('nb_client_id');
+    const savedTenantId = sessionStorage.getItem('nb_tenant_id');
+    if (savedClientId) {
+      const ci = document.getElementById('client-id');
+      const ti = document.getElementById('tenant-id');
+      if (ci) ci.value = savedClientId;
+      if (ti) ti.value = savedTenantId || '';
+    }
     if (hash && hash.includes('access_token')) {
-      const params = new URLSearchParams(hash.replace('#',''));
+      // Try both # and #/ formats
+      const hashContent = hash.startsWith('#/') ? hash.slice(2) : hash.slice(1);
+      const params = new URLSearchParams(hashContent);
       const token = params.get('access_token');
-      if (token) { accessToken = token; history.replaceState(null, '', window.location.pathname); onAuthenticated(); }
+      if (token) {
+        accessToken = token;
+        console.log('Token captured successfully');
+        history.replaceState(null, '', window.location.pathname);
+        onAuthenticated();
+      } else {
+        console.log('Hash present but no token found:', hash.substring(0, 100));
+      }
     }
   })();
 </script>
