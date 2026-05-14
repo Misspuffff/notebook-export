@@ -643,26 +643,12 @@
     const clientId = document.getElementById('client-id').value.trim();
     const tenantId = document.getElementById('tenant-id').value.trim() || 'common';
     if (!clientId) { alert('Please enter your Azure App Client ID'); return; }
+    sessionStorage.setItem('nb_client_id', clientId);
+    sessionStorage.setItem('nb_tenant_id', tenantId);
     const redirect = encodeURIComponent(window.location.href.split('#')[0].split('?')[0]);
     const scope = encodeURIComponent(SCOPES.join(' '));
     const url = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?client_id=${clientId}&response_type=token&redirect_uri=${redirect}&scope=${scope}&response_mode=fragment&prompt=select_account`;
-    const popup = window.open(url, 'ms-auth', 'width=520,height=640,left=200,top=100');
-    const btn = document.getElementById('connect-btn');
-    btn.textContent = 'Waiting for sign-in...';
-    btn.disabled = true;
-    const poll = setInterval(() => {
-      try {
-        if (!popup || popup.closed) { clearInterval(poll); btn.textContent = 'Sign in with Microsoft'; btn.disabled = false; return; }
-        const hash = popup.location.hash;
-        if (hash && hash.includes('access_token')) {
-          clearInterval(poll);
-          popup.close();
-          const params = new URLSearchParams(hash.replace('#',''));
-          accessToken = params.get('access_token');
-          onAuthenticated();
-        }
-      } catch(e) {}
-    }, 500);
+    window.location.href = url;
   }
 
   function onAuthenticated() {
