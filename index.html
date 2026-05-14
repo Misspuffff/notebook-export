@@ -645,7 +645,7 @@
     if (!clientId) { alert('Please enter your Azure App Client ID'); return; }
     const redirect = encodeURIComponent(window.location.href.split('#')[0].split('?')[0]);
     const scope = encodeURIComponent(SCOPES.join(' '));
-    const url = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?client_id=${clientId}&response_type=token&redirect_uri=${redirect}&scope=${scope}&response_mode=fragment`;
+    const url = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?client_id=${clientId}&response_type=token&redirect_uri=${redirect}&scope=${scope}&response_mode=fragment&prompt=consent`;
     const popup = window.open(url, 'ms-auth', 'width=520,height=640,left=200,top=100');
     const btn = document.getElementById('connect-btn');
     btn.textContent = 'Waiting for sign-in...';
