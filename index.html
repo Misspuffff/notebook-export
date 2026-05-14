@@ -667,32 +667,78 @@
     const el = document.getElementById('notebook-list');
     el.innerHTML = '<p class="loading-text">Loading notebooks...</p>';
     try {
-      const res = await fetch('https://graph.microsoft.com/v1.0/me/onenote/notebooks?orderby=lastModifiedDateTime desc', {
+      // Load personal notebooks
+      const personalRes = await fetch('https://graph.microsoft.com/v1.0/me/onenote/notebooks?orderby=lastModifiedDateTime desc', {
         headers: { Authorization: 'Bearer ' + accessToken }
       });
-      const data = await res.json();
-      notebooks = data.value || [];
+      const personalData = await personalRes.json();
+      const personalNbs = (personalData.value || []).map(nb => ({ ...nb, _source: 'personal' }));
+
+      // Load group/Teams notebooks
+      const teamsRes = await fetch('https://graph.microsoft.com/v1.0/me/joinedTeams', {
+        headers: { Authorization: 'Bearer ' + accessToken }
+      });
+      const teamsData = await teamsRes.json();
+      const teams = teamsData.value || [];
+
+      let groupNbs = [];
+      for (const team of teams) {
+        try {
+          const nbRes = await fetch(`https://graph.microsoft.com/v1.0/groups/${team.id}/onenote/notebooks`, {
+            headers: { Authorization: 'Bearer ' + accessToken }
+          });
+          const nbData = await nbRes.json();
+          const teamNbs = (nbData.value || []).map(nb => ({ ...nb, _source: team.displayName, _groupId: team.id }));
+          groupNbs = groupNbs.concat(teamNbs);
+        } catch(e) {}
+      }
+
+      // Deduplicate by id and merge
+      const seen = new Set();
+      notebooks = [...personalNbs, ...groupNbs].filter(nb => {
+        if (seen.has(nb.id)) return false;
+        seen.add(nb.id);
+        return true;
+      });
+
       el.innerHTML = '';
       if (!notebooks.length) { el.innerHTML = '<p class="loading-text">No notebooks found.</p>'; return; }
-      notebooks.forEach(nb => {
-        const item = document.createElement('div');
-        item.className = 'nb-item';
-        item.id = 'nb-' + nb.id;
-        const date = nb.lastModifiedDateTime ? new Date(nb.lastModifiedDateTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
-        item.innerHTML = `
-          <div class="nb-icon">📓</div>
-          <div style="flex:1;min-width:0;">
-            <div class="nb-name">${nb.displayName}</div>
-            <div class="nb-meta">Last modified ${date}</div>
-          </div>
-          <span class="tag tag-template" id="nbtag-${nb.id}" style="display:none;">template</span>
-        `;
-        item.onclick = () => selectNotebook(nb);
-        el.appendChild(item);
-      });
+
+      // Group by source
+      const personal = notebooks.filter(nb => nb._source === 'personal');
+      const groups = notebooks.filter(nb => nb._source !== 'personal');
+
+      const renderSection = (label, nbs) => {
+        if (!nbs.length) return;
+        const header = document.createElement('p');
+        header.style.cssText = 'font-size:11px;font-weight:500;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin:10px 0 6px;';
+        header.textContent = label;
+        el.appendChild(header);
+        nbs.forEach(nb => {
+          const item = document.createElement('div');
+          item.className = 'nb-item';
+          item.id = 'nb-' + nb.id;
+          const date = nb.lastModifiedDateTime ? new Date(nb.lastModifiedDateTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+          item.innerHTML = `
+            <div class="nb-icon">📓</div>
+            <div style="flex:1;min-width:0;">
+              <div class="nb-name">${nb.displayName}</div>
+              <div class="nb-meta">${nb._source !== 'personal' ? nb._source + ' · ' : ''}Last modified ${date}</div>
+            </div>
+            <span class="tag tag-template" id="nbtag-${nb.id}" style="display:none;">template</span>
+          `;
+          item.onclick = () => selectNotebook(nb);
+          el.appendChild(item);
+        });
+      };
+
+      renderSection('Personal', personal);
+      renderSection('Teams', groups);
+
       setStep(3);
       loadChannels();
     } catch(e) {
+      console.error(e);
       el.innerHTML = '<p class="loading-text" style="color:var(--red-600);">Could not load notebooks. Check your API permissions.</p>';
     }
   }
@@ -916,7 +962,7 @@
         accessToken = token;
         console.log('Token captured successfully');
         history.replaceState(null, '', window.location.pathname);
-        onAuthenticated();
+        setTimeout(onAuthenticated, 100);
       } else {
         console.log('Hash present but no token found:', hash.substring(0, 100));
       }
